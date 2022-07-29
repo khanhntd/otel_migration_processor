@@ -1,0 +1,204 @@
+Parameters:
+  ClusterName:
+    Type: String
+    Description: 'ecs-ec2-nginx'
+    Default: 'ecs-ec2-nginx'
+  # IAM
+  CreateIAMRoles:
+    Type: String
+    Default: 'False'
+    AllowedValues:
+      - 'True'
+      - 'False'
+    Description: Create new default IAM roles or use existing ones.
+    ConstraintDescription: must specify True or False.
+  TaskRoleArn:
+    Type: String
+    Default: 'arn:aws:iam::167129616597:role/test-again'
+    Description: Enter the role arn you want to use as the ecs task role
+  ExecutionRoleArn:
+    Type: String
+    Default: 'arn:aws:iam::167129616597:role/test-once-more'
+    Description: Enter the role arn you want to use as the ecs execution role
+  # Collector
+  CollectorImage:
+    Type: String
+    Default: 'public.ecr.aws/aws-observability/aws-otel-collector:v0.12.0'
+Conditions:
+  CreateRoles: !Equals
+    - !Ref CreateIAMRoles
+    - 'True'
+  DefaultTaskRole: !Equals
+    - !Ref TaskRoleArn
+    - Default
+  DefaultExecutionRole: !Equals
+    - !Ref ExecutionRoleArn
+    - Default
+Resources:
+  ECSTaskDefinition:
+    Type: 'AWS::ECS::TaskDefinition'
+    Properties:
+      Family: !Sub 'adot-container-insights-prometheus-${ClusterName}'
+      TaskRoleArn: !If
+        - CreateRoles
+        - !GetAtt
+          - ECSTaskRole
+          - Arn
+        - !If
+          - DefaultTaskRole
+          - !Sub 'arn:aws:iam::${AWS::AccountId}:role/AWSOTelRole'
+          - !Ref TaskRoleArn
+      ExecutionRoleArn: !If
+        - CreateRoles
+        - !GetAtt
+          - ECSExecutionRole
+          - Arn
+        - !If
+          - DefaultExecutionRole
+          - !Sub 'arn:aws:iam::${AWS::AccountId}:role/AWSOTelExecutionRole'
+          - !Ref ExecutionRoleArn
+      NetworkMode: bridge
+      ContainerDefinitions:
+        - LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-create-group: 'True'
+              awslogs-group: !Sub '/ecs/aws-otel-collector/${ClusterName}'
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: ecs
+          Image: !Ref CollectorImage
+          Name: aws-collector
+          Secrets:
+            - Name: AOT_CONFIG_CONTENT
+              ValueFrom: !Sub 'AmazonCloudWatch-AOC-ECS-Prometheus-${ClusterName}'
+      Memory: '512'
+      RequiresCompatibilities:
+        - EC2
+      Cpu: '256'
+  ECSReplicaService:
+    Type: 'AWS::ECS::Service'
+    Properties:
+      TaskDefinition: !Ref ECSTaskDefinition
+      Cluster: !Ref ClusterName
+      LaunchType: EC2
+      SchedulingStrategy: REPLICA
+      DesiredCount: 1
+      ServiceName: adot-container-insights-prometheus-service
+  ECSTaskRole:
+    Type: 'AWS::IAM::Role'
+    Condition: CreateRoles
+    Properties:
+      Description: Allows ECS tasks to call AWS services on your behalf.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: AWSOpenTelemetryPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:PutLogEvents'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:DescribeLogStreams'
+                  - 'logs:DescribeLogGroups'
+                  - 'xray:PutTraceSegments'
+                  - 'xray:PutTelemetryRecords'
+                  - 'xray:GetSamplingRules'
+                  - 'xray:GetSamplingTargets'
+                  - 'xray:GetSamplingStatisticSummaries'
+                  - 'ssm:GetParameters'
+                Resource: '*'
+        - PolicyName: AWSOpenTelemetryPolicyPrometheusECSDiscovery
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ecs:ListTasks'
+                  - 'ecs:ListServices'
+                  - 'ecs:DescribeContainerInstances'
+                  - 'ecs:DescribeServices'
+                  - 'ecs:DescribeTasks'
+                  - 'ecs:DescribeTaskDefinition'
+                Resource: '*'
+      RoleName: AWSOTelRolePrometheusECS
+  ECSExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Condition: CreateRoles
+    Properties:
+      Description: >-
+        Allows ECS container agent makes calls to the Amazon ECS API on your
+        behalf.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+        - 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
+        - 'arn:aws:iam::aws:policy/AmazonSSMReadOnlyAccess'
+      RoleName: AWSOTelExecutionRolePrometheusECS
+  AocConfigSSMParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub 'AmazonCloudWatch-AOC-ECS-Prometheus-${ClusterName}'
+      Type: String
+      Tier: Intelligent-Tiering
+      Description: !Sub 'CWAgent SSM Parameter with App Mesh and Java EMF Definition for ECS Cluster: ${ClusterName}'
+      Value: !Sub |-
+        extensions:
+          ecs_observer:
+            cluster_name: '${ClusterName}'
+            cluster_region: '${AWS::Region}'
+            result_file: '/etc/ecs_sd_targets.yaml'
+            refresh_interval: 60s
+        receivers:
+          prometheus:
+            config:
+              scrape_configs:
+                - job_name: "ecssd"
+                  file_sd_configs:
+                    - files:
+                        - '/etc/ecs_sd_targets.yaml'
+                  relabel_configs:
+                    - source_labels: [ __meta_ecs_cluster_name ] # ClusterName
+                      action: replace
+                      target_label: ClusterName
+                    - source_labels: [ __meta_ecs_service_name ] # ServiceName
+                      action: replace
+                      target_label: ServiceName
+                    - source_labels: [ __meta_ecs_task_definition_family ] # TaskDefinitionFamily
+                      action: replace
+                      target_label: TaskDefinitionFamily
+                    - source_labels: [ __meta_ecs_container_name ] # container_name
+                      action: replace
+                      target_label: container_name
+                    - action: labelmap # docker labels
+                      regex: ^__meta_ecs_container_labels_(.+)$
+                      replacement: '$$1'
+        exporters:
+          awsemf:
+            region: '${AWS::Region}'
+            namespace: ECS/ContainerInsights/Prometheus-2
+            log_group_name: "/aws/ecs/containerinsights/${ClusterName}/prometheus"
+            dimension_rollup_option: NoDimensionRollup
+            
+        service:
+          extensions: [ ecs_observer ]
+          pipelines:
+            metrics:
+              receivers: [ prometheus ]
+              exporters: [ awsemf ]

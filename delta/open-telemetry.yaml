@@ -1,0 +1,20 @@
+receivers:
+  hostmetrics/disk:
+    collection_interval: 1m
+    scrapers:
+      disk:
+      filesystem:
+
+processors:
+
+
+  batch/metrics:
+    timeout: 60s
+  cumulativetodelta:
+
+service:
+  pipelines:
+    metrics:
+      receivers: [ hostmetrics/disk]
+      processors: [ cumulativetodelta, batch/metrics ]
+      exporters: [ awsemf, logging ]
