@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: amazon-cloudwatch
+  name: amazon-cloudwatch-2
   labels:
     name: amazon-cloudwatch
 ---
@@ -12,7 +12,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cloudwatch-agent
-  namespace: amazon-cloudwatch
+  namespace: amazon-cloudwatch-2
 
 ---
 kind: ClusterRole
@@ -48,7 +48,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: cloudwatch-agent
-    namespace: amazon-cloudwatch
+    namespace: amazon-cloudwatch-2
 roleRef:
   kind: ClusterRole
   name: cloudwatch-agent-role
@@ -78,7 +78,7 @@ data:
 kind: ConfigMap
 metadata:
   name: cwagentconfig
-  namespace: amazon-cloudwatch
+  namespace: amazon-cloudwatch-2
 
 ---
 
@@ -87,7 +87,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: cloudwatch-agent
-  namespace: amazon-cloudwatch
+  namespace: amazon-cloudwatch-2
 spec:
   selector:
     matchLabels:
@@ -99,7 +99,7 @@ spec:
     spec:
       containers:
         - name: cloudwatch-agent
-          image: amazon/cloudwatch-agent:1.247346.0b249609
+          image: amazon/cloudwatch-agent:1.247354.0b251981
           #ports:
           #  - containerPort: 8125
           #    hostPort: 8125
@@ -185,4 +185,4 @@ data:
 kind: ConfigMap
 metadata:
   name: cluster-info
-  namespace: amazon-cloudwatch
+  namespace: amazon-cloudwatch-2

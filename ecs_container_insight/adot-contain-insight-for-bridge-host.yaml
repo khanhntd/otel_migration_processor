@@ -56,7 +56,7 @@ Resources:
       NetworkMode: bridge
       ContainerDefinitions:
         - Name: aws-collector
-          Image: 'public.ecr.aws/aws-observability/aws-otel-collector:v0.12.0'
+          Image: 'public.ecr.aws/aws-observability/aws-otel-collector:v0.20.0'
           MountPoints:
             - ReadOnly: true
               ContainerPath: /rootfs/proc

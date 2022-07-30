@@ -5,13 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4481c771-2608-49a4-9ab0-5d28b1c1110c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/delta/open-telemetry.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ecs_container_insight/adot-contain-insight-for-bridge-host.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ecs_container_insight/adot-ecs-instance-metric.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ecs_container_insight/agent-default-container.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ecs_container_insight/cwagent-ecs-instance-metric.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/eks_container_insight/adot-container-insight.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/prometheus/adot-ecs-prometheus-metric-for-bridge-host.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ecs_container_insight/adot-contain-insight-for-bridge-host.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/ecs_container_insight/adot-contain-insight-for-bridge-host.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ecs_container_insight/cwagent-ecs-instance-metric.json" beforeDir="false" afterPath="$PROJECT_DIR$/ecs_container_insight/cwagent-ecs-instance-metric.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eks_container_insight/adot-container-insight.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/eks_container_insight/adot-container-insight.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/eks_container_insight/cwagent-container-insight.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/eks_container_insight/cwagent-container-insight.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
