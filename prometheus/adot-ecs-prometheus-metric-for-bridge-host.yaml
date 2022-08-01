@@ -2,7 +2,7 @@ Parameters:
   ClusterName:
     Type: String
     Description: 'ecs-ec2-nginx'
-    Default: 'ecs-ec2-nginx'
+    Default: 'ecs-ec2-memcached-tutorial-2'
   # IAM
   CreateIAMRoles:
     Type: String
@@ -14,11 +14,11 @@ Parameters:
     ConstraintDescription: must specify True or False.
   TaskRoleArn:
     Type: String
-    Default: 'arn:aws:iam::167129616597:role/test-again'
+    Default: 'arn:aws:iam::167129616597:role/CWAgentECSTaskRole'
     Description: Enter the role arn you want to use as the ecs task role
   ExecutionRoleArn:
     Type: String
-    Default: 'arn:aws:iam::167129616597:role/test-once-more'
+    Default: 'arn:aws:iam::167129616597:role/CWAgentECSExecutionRole'
     Description: Enter the role arn you want to use as the ecs execution role
   # Collector
   CollectorImage:
@@ -165,9 +165,18 @@ Resources:
             cluster_region: '${AWS::Region}'
             result_file: '/etc/ecs_sd_targets.yaml'
             refresh_interval: 60s
+            task_definitions:
+            - arn_pattern: '.*:task-definition/memcached-prometheus-demo.*:[0-9]+'
+              metrics_path: '/metrics'
+              metrics_ports:
+                - 9150
+              job_name: ecs-memcached
         receivers:
           prometheus:
             config:
+              global:
+                scrape_interval: 15s
+                scrape_timeout: 10s
               scrape_configs:
                 - job_name: "ecssd"
                   file_sd_configs:
@@ -186,19 +195,37 @@ Resources:
                     - source_labels: [ __meta_ecs_container_name ] # container_name
                       action: replace
                       target_label: container_name
-                    - action: labelmap # docker labels
-                      regex: ^__meta_ecs_container_labels_(.+)$
-                      replacement: '$$1'
+                  
         exporters:
           awsemf:
             region: '${AWS::Region}'
-            namespace: ECS/ContainerInsights/Prometheus-2
+            namespace: ECS/ContainerInsights/Prometheus-7
             log_group_name: "/aws/ecs/containerinsights/${ClusterName}/prometheus"
             dimension_rollup_option: NoDimensionRollup
-            
+            metric_declarations:
+              - dimensions: [ [ ClusterName, TaskDefinitionFamily ] ]
+                label_matchers:
+                  - label_names:
+                      - container_name
+                    regex: 'memcached-exporter-.*'
+                metric_name_selectors:
+                  - "^memcached_current_(bytes|items|connections)$"
+                  - "^memcached_items_(reclaimed|evicted)_total$"
+                  - "^memcached_(written|read)_bytes_total$"
+                  - "^memcached_limit_bytes$"
+                  - "^memcached_commands_total$"
+              - dimensions: [ [ ClusterName, TaskDefinitionFamily,status,command], [ClusterName, TaskDefinitionFamily,command] ]
+                label_matchers:
+                  - label_names:
+                      - container_name
+                    regex: 'memcached-exporter-.*'
+                metric_name_selectors:
+                  - "^memcached_commands_total$"
+          logging:
+            loglevel: debug  
         service:
           extensions: [ ecs_observer ]
           pipelines:
             metrics:
               receivers: [ prometheus ]
-              exporters: [ awsemf ]
+              exporters: [ awsemf, logging ]
