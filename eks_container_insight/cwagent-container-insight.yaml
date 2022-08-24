@@ -99,7 +99,7 @@ spec:
     spec:
       containers:
         - name: cloudwatch-agent
-          image: amazon/cloudwatch-agent:1.247354.0b251981
+          image: public.ecr.aws/i7a4z2v8/cwagent-prometheus-metrics:containerd
           #ports:
           #  - containerPort: 8125
           #    hostPort: 8125
