@@ -46,6 +46,20 @@ Resources:
             sample_limit: 10000
             file_sd_configs:
               - files: [ "/tmp/cwagent_ecs_auto_sd.yaml" ]
+            relabel_configs:
+              - source_labels: [__address__]
+                replacement: job_replacement
+                target_label: job
+            metric_relabel_configs:
+              - source_labels: [ __address__ ]
+                replacement: instance_replacement
+                target_label: instance
+              - source_labels: [__name__]
+                regex: "memcached_commands_total(.*)"
+                target_label: __name__
+                replacement: "memcached_commands"
+            
+
   CWAgentConfigSSMParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -77,6 +91,7 @@ Resources:
                 },
                 "emf_processor": {
                   "metric_declaration_dedup": true,
+                  "metric_namespace": "PrometheusTest-5678",
                   "metric_declaration": [
                     {
                       "source_labels": ["container_name"],
@@ -87,7 +102,7 @@ Resources:
                           "^memcached_items_(reclaimed|evicted)_total$",
                           "^memcached_(written|read)_bytes_total$",
                           "^memcached_limit_bytes$",
-                          "^memcached_commands_total$"
+                          "^memcached_commands$"
                       ]
                     },
                     {
@@ -95,7 +110,7 @@ Resources:
                       "label_matcher": "memcached-exporter-.*",
                       "dimensions": [["ClusterName", "TaskDefinitionFamily","status","command"], ["ClusterName", "TaskDefinitionFamily","command"]],
                       "metric_selectors": [
-                          "^memcached_commands_total$"
+                          "^memcached_commands$"
                       ]
                     }
                   ]
@@ -180,7 +195,7 @@ Resources:
       NetworkMode: !Ref ECSNetworkMode
       ContainerDefinitions:
         - Name: cloudwatch-agent-prometheus
-          Image: amazon/cloudwatch-agent:1.247350.0b251780
+          Image: public.ecr.aws/i7a4z2v8/cwagent-prometheus-metrics:OOM
           Essential: true
           MountPoints: []
           PortMappings: []
@@ -210,5 +225,5 @@ Resources:
       DesiredCount: 1
       LaunchType: EC2
       SchedulingStrategy: REPLICA
-      ServiceName: !Sub 'cwagent-prometheus-replica-service-EC2-${ECSNetworkMode}'
+      ServiceName: !Sub 'cwagent-prometheus-replica-service-EC2-${ECSNetworkMode}-after-77'
       TaskDefinition: !Ref ECSCWAgentTaskDefinition
