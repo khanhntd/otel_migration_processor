@@ -91,7 +91,7 @@ Resources:
                 },
                 "emf_processor": {
                   "metric_declaration_dedup": true,
-                  "metric_namespace": "PrometheusTest-5678",
+                  "metric_namespace": "PrometheusTest-00000",
                   "metric_declaration": [
                     {
                       "source_labels": ["container_name"],
@@ -195,7 +195,7 @@ Resources:
       NetworkMode: !Ref ECSNetworkMode
       ContainerDefinitions:
         - Name: cloudwatch-agent-prometheus
-          Image: public.ecr.aws/i7a4z2v8/cwagent-prometheus-metrics:OOM
+          Image: public.ecr.aws/i7a4z2v8/cwagent-prometheus-metrics:containerd
           Essential: true
           MountPoints: []
           PortMappings: []

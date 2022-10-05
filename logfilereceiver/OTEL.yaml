@@ -1,0 +1,27 @@
+receivers:
+  filelog:
+    include: [ testdata/simple.log ]
+    start_at: beginning
+
+processors:
+  batch/logs:
+    timeout: 60s
+
+exporters:
+  awscloudwatchlogs:
+    log_group_name: "testing-logs"
+    log_stream_name: "testing-integrations-stream"
+    region: "us-west-2"
+    retry_on_failure:
+      enabled: true
+      initial_interval: 10ms
+
+  logging:
+    loglevel: debug
+
+service:
+  pipelines:
+    logs:
+      receivers: [ prometheus ]
+      processors: [ batch/logs ]
+      exporters: [ awscloudwatchlogs, logging ]
